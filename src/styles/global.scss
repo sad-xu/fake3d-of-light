@@ -1,0 +1,108 @@
+
+// 字体
+@font-face {
+  font-family: EORZEA;
+  src: url('../assets/EORZEA.ttf');
+}
+
+// 全局样式
+* {
+  margin: 0;
+  padding: 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+  color: #eee;
+  font-size: 16px;
+  background-color: #333;
+}
+
+img {
+  border-style: none;
+}
+
+img,
+svg {
+  vertical-align: middle;
+}
+
+input,
+button {
+  outline: none;
+  appearance: none;
+}
+
+input[type='text'] {
+  display: block;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 18px;
+  background: #45454599;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  box-shadow: inset 0 0 4px #fff;
+  transition: all 0.3s;
+
+  &:focus {
+    border-color: #2196f3;
+    box-shadow: inset 0 0 4px #4da2c9;
+  }
+
+  &::placeholder {
+    color: #999;
+    font-size: 16px;
+  }
+}
+
+input[type='radio'] {
+  appearance: auto;
+}
+
+::selection {
+  color: #f3f3f3;
+  background: #0c4e6f;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(0 0 0 / 20%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #686868;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: rgb(144 147 153 / 50%);
+  }
+}
+
+/* transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
