@@ -1,4 +1,3 @@
-
 // 字体
 @font-face {
   font-family: EORZEA;
@@ -94,15 +93,4 @@ input[type='radio'] {
   &:hover {
     background-color: rgb(144 147 153 / 50%);
   }
-}
-
-/* transition */
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.3s;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }

@@ -21,35 +21,26 @@ vec2 mirrored(vec2 v) {
   return mix(m, 2.0 - m, step(1.0, m));
 }
 
-const float kernel[9] = float[](
-  0.0625, 0.125, 0.0625,
-  0.125,  0.25,  0.125,
-  0.0625, 0.125, 0.0625
+// const float kernel[9] = float[](
+//   0.0625, 0.125, 0.0625,
+//   0.125,  0.25,  0.125,
+//   0.0625, 0.125, 0.0625
+// );
 
-  // 0.0947, 0.118, 0.0947,
-  // 0.118,  0.147,  0.118,
-  // 0.0947, 0.118, 0.0947
+// int level = 3;
 
-  // 0.10962969557990561, 0.11184436233734502, 0.10962969557990561,
-  // 0.11184436233734502, 0.1141037683309974, 0.11184436233734502,
-  // 0.10962969557990561, 0.11184436233734502, 0.10962969557990561
-
-);
-
-int level = 3;
-
-vec4 blur(sampler2D t, vec2 uv, vec2 texelSize) {
-  vec4 sum = vec4(0.0);
-  // for (int n = 0; n < 3; n++) {
-    for (int i = 0; i < level; i++) {
-      for (int j = 0; j < level; j++) {
-        vec2 offset = vec2(float(i), float(j)) - vec2(1.0, 1.0);
-        sum += texture(t, uv + offset * texelSize) * kernel[i * level + j];
-      }
-    }
-  // }
-  return sum;
-}
+// vec4 blur(sampler2D t, vec2 uv, vec2 texelSize) {
+//   vec4 sum = vec4(0.0);
+//   // for (int n = 0; n < 3; n++) {
+//     for (int i = 0; i < level; i++) {
+//       for (int j = 0; j < level; j++) {
+//         vec2 offset = vec2(float(i), float(j)) - vec2(1.0, 1.0);
+//         sum += texture(t, uv + offset * texelSize) * kernel[i * level + j];
+//       }
+//     }
+//   // }
+//   return sum;
+// }
 
 void main() {
   vec2 uv = pixelRatio * gl_FragCoord.xy / resolution.xy ;
@@ -57,12 +48,13 @@ void main() {
   vUv.y = 1.0 - vUv.y;
 
   // 模糊深度图
-  vec2 texelSize = 1.0 / resolution.xy;
-  vec4 blurredDepth = blur(image1, mirrored(vUv), texelSize);
+  // vec2 texelSize = 1.0 / resolution.xy;
+  // vec4 blurredDepth = blur(image1, mirrored(vUv), texelSize);
 
   vec4 tex1 = texture(image1, mirrored(vUv));
-  // float originalRed = tex1.r - 0.5;
-  float originalRed = 1.0 - blurredDepth.r - 0.5;
+  float originalRed = 1.0 - tex1.r;
+  // float originalRed = smoothstep(0.9, 1.0, 1.0 - tex1.r);
+  // float originalRed = 1.0 - blurredDepth.r - 0.5;
 
   vec2 fake3d = vec2(
     vUv.x + originalRed * mouse.x / threshold.x,
@@ -71,7 +63,45 @@ void main() {
 
   fragColor = texture(image0, mirrored(fake3d));
 
-  // fragColor = blurredDepth; //texture(image1, mirrored(fake3d));
+  // fragColor = texture(image0, vUv);
+  // fragColor = vec4(originalRed, 0.0, 0.0, 1.0);
+  // fragColor = vec4(smoothstep(0.95, 1.0, 1.0 - tex1.r), 0.0, 0.0, 1.0);
+}`;
+
+const fragment3 = `#version 300 es
+precision mediump float;
+
+uniform vec4 resolution;
+uniform vec2 mouse;
+uniform vec2 threshold;
+uniform float pixelRatio;
+uniform sampler2D image0;
+uniform sampler2D image1;
+
+
+out vec4 fragColor;
+
+
+vec2 mirrored(vec2 v) {
+  vec2 m = mod(v,2.);
+  return mix(m,2.0 - m, step(1.0 ,m));
+}
+
+void main() {
+  vec2 uv = pixelRatio * gl_FragCoord.xy / resolution.xy;
+  vec2 vUv = (uv - vec2(0.5))*resolution.zw + vec2(0.5);
+  vUv.y = 1. - vUv.y;
+  vec4 tex1 = texture(image1,mirrored(vUv));
+  tex1.r = 1.0 - tex1.r - 0.5;
+  // tex1.r = 1.0 - smoothstep(0.1, 0.9, tex1.r) - 0.5;
+
+  vec2 fake3d = vec2(
+    vUv.x + tex1.r * mouse.x/threshold.x,
+    vUv.y + tex1.r * mouse.y/threshold.y
+  );
+  fragColor  = texture(image0, mirrored(fake3d));
+
+  // fragColor = vec4(tex1.r, tex1.r,tex1.r, 1.0);
 }`;
 
 const fragment2 = `#version 300 es
@@ -135,7 +165,7 @@ const fake3d = (canvasEl: HTMLCanvasElement) => {
   /** 初始化着色器 */
   function createScene() {
     addShader(vertex, gl.VERTEX_SHADER);
-    addShader(fragment, gl.FRAGMENT_SHADER);
+    addShader(fragment3, gl.FRAGMENT_SHADER);
 
     gl.linkProgram(program);
     gl.useProgram(program);
@@ -161,45 +191,60 @@ const fake3d = (canvasEl: HTMLCanvasElement) => {
 
   /** 添加图像纹理 */
   function setTexture(originImg: string, depthImg: string, cb: (imgEl: HTMLImageElement) => void) {
-    return Promise.all([loadImg(originImg), loadImg(depthImg)]).then((imgs) => {
-      originWidth = imgs[0].naturalWidth;
-      originHeight = imgs[0].naturalHeight;
-      imageAspect = originHeight / originWidth;
-      const texture0 = useImg(imgs[0]);
-      const texture1 = useImg(imgs[1]);
+    if (!originImg.length || !depthImg.length) return;
+    return Promise.all([loadImg(originImg), loadImg(depthImg)])
+      .then((imgs) => {
+        originWidth = imgs[0].naturalWidth;
+        originHeight = imgs[0].naturalHeight;
+        imageAspect = originHeight / originWidth;
+        const texture0 = useImg(imgs[0]);
+        const texture1 = useImg(imgs[1]);
 
-      gl.uniform1i(gl.getUniformLocation(program, 'image0'), 0);
-      gl.uniform1i(gl.getUniformLocation(program, 'image1'), 1);
+        gl.uniform1i(gl.getUniformLocation(program, 'image0'), 0);
+        gl.uniform1i(gl.getUniformLocation(program, 'image1'), 1);
 
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, texture0);
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, texture1);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture0);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, texture1);
 
-      cb(imgs[0]);
+        cb(imgs[0]);
 
-      window.setTimeout(() => {
-        console.log('resize');
-        canvasEl.width = originWidth;
-        canvasEl.height = originHeight;
+        window.setTimeout(() => {
+          console.log('resize');
+          canvasEl.width = originWidth;
+          canvasEl.height = originHeight;
 
-        gl.uniform4f(gl.getUniformLocation(program, 'resolution'), originWidth, originHeight, 1, 1);
-        gl.uniform1f(gl.getUniformLocation(program, 'pixelRatio'), 1 / window.devicePixelRatio);
-        // gl.uniform2f(gl.getUniformLocation(program, 'threshold'), 65, 55);
-        gl.uniform2f(gl.getUniformLocation(program, 'threshold'), 60, 50);
-        gl.viewport(0, 0, originWidth, originHeight);
-      }, 0);
-      return imgs;
-    });
+          gl.uniform4f(
+            gl.getUniformLocation(program, 'resolution'),
+            originWidth,
+            originHeight,
+            1,
+            1
+          );
+          gl.uniform1f(gl.getUniformLocation(program, 'pixelRatio'), 1 / window.devicePixelRatio);
+          // gl.uniform2f(gl.getUniformLocation(program, 'threshold'), 65, 55);
+          gl.uniform2f(gl.getUniformLocation(program, 'threshold'), 60, 50);
+          gl.viewport(0, 0, originWidth, originHeight);
+        }, 0);
+        return imgs;
+      })
+      .catch((e) => {
+        console.log('图片加载失败', e);
+      });
   }
 
   /** 加载图片 */
   function loadImg(url: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = 'anonymous';
       img.src = url;
       img.onload = () => {
         resolve(img);
+      };
+      img.onerror = (err) => {
+        reject(err);
       };
     });
   }
