@@ -30,6 +30,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  assetsInclude: ['**/*.onnx'],
   css: {
     // 全局导入scss方法
     // preprocessorOptions: {

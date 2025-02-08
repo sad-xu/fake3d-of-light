@@ -41,7 +41,7 @@
   }>();
 
   const emits = defineEmits<{
-    (e: 'upload', fileUrl: string): void;
+    (e: 'upload', fileUrl: string, file: File): void;
   }>();
 
   const uploadInputRef = ref();
@@ -55,7 +55,7 @@
       const file = e.target.files[0];
       if (file) {
         const fileUrl = window.URL.createObjectURL(file);
-        emits('upload', fileUrl);
+        emits('upload', fileUrl, file);
       }
     }
   };
